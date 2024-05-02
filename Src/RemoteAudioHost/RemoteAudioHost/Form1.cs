@@ -1,17 +1,10 @@
 ﻿using NAudio.Wave;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using WebSocketSharp.Server;
 using WebSocketSharp;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace RemoteAudioHost
 {
@@ -22,14 +15,14 @@ namespace RemoteAudioHost
             InitializeComponent();
         }
         [DllImport("winmm.dll", EntryPoint = "timeBeginPeriod")]
-        public static extern uint TimeBeginPeriod(uint ms);
+        private static extern uint TimeBeginPeriod(uint ms);
         [DllImport("winmm.dll", EntryPoint = "timeEndPeriod")]
-        public static extern uint TimeEndPeriod(uint ms);
+        private static extern uint TimeEndPeriod(uint ms);
         [DllImport("ntdll.dll", EntryPoint = "NtSetTimerResolution")]
-        public static extern void NtSetTimerResolution(uint DesiredResolution, bool SetResolution, ref uint CurrentResolution);
-        public static uint CurrentResolution = 0;
-        public static bool running = false;
-        public static string audioport, ip;
+        private static extern void NtSetTimerResolution(uint DesiredResolution, bool SetResolution, ref uint CurrentResolution);
+        private static uint CurrentResolution = 0;
+        private static bool running = false;
+        private static string audioport, ip;
         private void Form1_Load(object sender, EventArgs e)
         {
             TimeBeginPeriod(1);
@@ -80,10 +73,11 @@ namespace RemoteAudioHost
         }
         public class LSPAudio
         {
-            public static string ip;
-            public static string port;
-            public static WebSocketServer wss;
-            public static byte[] rawdataavailable, rawdata;
+            private static string ip;
+            private static string port;
+            private static WebSocketServer wss;
+            public static byte[] rawdataavailable;
+            private static byte[] rawdata;
             private static WasapiLoopbackCapture waveIn = null;
             public static void Connect()
             {
@@ -105,7 +99,7 @@ namespace RemoteAudioHost
                 wss.Stop();
                 waveIn.Dispose();
             }
-            public static void GetAudioByteArray()
+            private static void GetAudioByteArray()
             {
                 waveIn = new WasapiLoopbackCapture();
                 waveIn.DataAvailable += waveIn_DataAvailable;
@@ -116,10 +110,6 @@ namespace RemoteAudioHost
                 rawdata = new byte[e.BytesRecorded];
                 Array.Copy(e.Buffer, 0, rawdata, 0, e.BytesRecorded);
                 rawdataavailable = rawdata;
-            }
-            public static void InitData()
-            {
-                rawdataavailable = null;
             }
         }
         public class Audio : WebSocketBehavior
@@ -134,7 +124,7 @@ namespace RemoteAudioHost
                         try
                         {
                             Send(LSPAudio.rawdataavailable);
-                            LSPAudio.InitData();
+                            LSPAudio.rawdataavailable = null;
                         }
                         catch { }
                     }
