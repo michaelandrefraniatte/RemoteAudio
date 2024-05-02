@@ -112,20 +112,14 @@ namespace RemoteAudio
             }
             soundOut = new WasapiOut(wasapi, AudioClientShareMode.Shared, false, 2);
             src = new BufferedWaveProvider(soundOut.OutputWaveFormat);
+            src.DiscardOnBufferOverflow = true;
+            src.BufferDuration = TimeSpan.FromMilliseconds(80);
             soundOut.Init(src);
             soundOut.Play();
         }
         private void Ws_OnMessageAudio(object sender, MessageEventArgs e)
         {
-            byte[] Data = TrimEndAudio(e.RawData);
-            if (Data.Length > 0)
-                src.AddSamples(Data, 0, Data.Length);
-        }
-        public byte[] TrimEndAudio(byte[] array)
-        {
-            int lastIndex = Array.FindLastIndex(array, b => b != 0);
-            Array.Resize(ref array, lastIndex + 1);
-            return array;
+            src.AddSamples(e.RawData, 0, e.RawData.Length);
         }
         public void DisconnectAudio()
         {

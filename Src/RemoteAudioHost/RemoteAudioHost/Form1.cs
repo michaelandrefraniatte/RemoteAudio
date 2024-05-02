@@ -124,6 +124,10 @@ namespace RemoteAudioHost
                     rawdataavailable = rawdata;
                 }
             }
+            public static void InitData()
+            {
+                rawdataavailable = null;
+            }
         }
         public class Audio : WebSocketBehavior
         {
@@ -137,7 +141,7 @@ namespace RemoteAudioHost
                         try
                         {
                             Send(LSPAudio.rawdataavailable);
-                            LSPAudio.rawdataavailable = null;
+                            LSPAudio.InitData();
                         }
                         catch { }
                     }
