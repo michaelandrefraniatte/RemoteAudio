@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using WebSocketSharp.Server;
 using WebSocketSharp;
+using System.Threading;
 
 namespace RemoteAudioHost
 {
@@ -53,6 +54,16 @@ namespace RemoteAudioHost
                 this.Close();
             }
         }
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            running = false;
+            System.Threading.Thread.Sleep(300);
+            using (System.IO.StreamWriter createdfile = new System.IO.StreamWriter("tempsave"))
+            {
+                createdfile.WriteLine(textBox1.Text);
+                createdfile.WriteLine(textBox2.Text);
+            }
+        }
         private void button1_Click(object sender, EventArgs e)
         {
             if (!running)
@@ -75,9 +86,8 @@ namespace RemoteAudioHost
         {
             private static string ip;
             private static string port;
+            private static Audio audio = new Audio();
             private static WebSocketServer wss;
-            public static byte[] rawdataavailable;
-            private static byte[] rawdata;
             private static WasapiLoopbackCapture waveIn = null;
             public static void Connect()
             {
@@ -93,53 +103,36 @@ namespace RemoteAudioHost
                 }
                 catch { }
             }
+            private static void GetAudioByteArray()
+            {
+                waveIn = new WasapiLoopbackCapture();
+                waveIn.DataAvailable += audio.waveIn_DataAvailable;
+                waveIn.StartRecording();
+            }
             public static void Disconnect()
             {
                 wss.RemoveWebSocketService("/Audio");
                 wss.Stop();
                 waveIn.Dispose();
             }
-            private static void GetAudioByteArray()
-            {
-                waveIn = new WasapiLoopbackCapture();
-                waveIn.DataAvailable += waveIn_DataAvailable;
-                waveIn.StartRecording();
-            }
-            private static void waveIn_DataAvailable(object sender, WaveInEventArgs e)
-            {
-                rawdata = new byte[e.BytesRecorded];
-                Array.Copy(e.Buffer, 0, rawdata, 0, e.BytesRecorded);
-                rawdataavailable = rawdata;
-            }
         }
         public class Audio : WebSocketBehavior
         {
+            private static byte[] rawdataavailable;
             protected override void OnMessage(MessageEventArgs e)
             {
                 base.OnMessage(e);
                 while (Form1.running)
                 {
-                    if (LSPAudio.rawdataavailable != null)
-                    {
-                        try
-                        {
-                            Send(LSPAudio.rawdataavailable);
-                            LSPAudio.rawdataavailable = null;
-                        }
-                        catch { }
-                    }
-                    System.Threading.Thread.Sleep(1);
+                    if (rawdataavailable != null)
+                        Send(rawdataavailable);
+                    rawdataavailable = null;
+                    Thread.Sleep(1);
                 }
             }
-        }
-        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            running = false;
-            System.Threading.Thread.Sleep(300);
-            using (System.IO.StreamWriter createdfile = new System.IO.StreamWriter("tempsave"))
+            public void waveIn_DataAvailable(object sender, WaveInEventArgs e)
             {
-                createdfile.WriteLine(textBox1.Text);
-                createdfile.WriteLine(textBox2.Text);
+                rawdataavailable = e.Buffer;
             }
         }
     }
