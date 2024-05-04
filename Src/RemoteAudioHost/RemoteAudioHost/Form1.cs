@@ -23,7 +23,7 @@ namespace RemoteAudioHost
         private static extern void NtSetTimerResolution(uint DesiredResolution, bool SetResolution, ref uint CurrentResolution);
         private static uint CurrentResolution = 0;
         private static bool running = false;
-        private static string audioport, ip;
+        private static string audioport, localip;
         private void Form1_Load(object sender, EventArgs e)
         {
             TimeBeginPeriod(1);
@@ -70,7 +70,7 @@ namespace RemoteAudioHost
             {
                 button1.Text = "Stop";
                 running = true;
-                ip = textBox1.Text;
+                localip = textBox1.Text;
                 audioport = textBox2.Text;
                 Task.Run(() => LSPAudio.Connect());
             }
@@ -84,7 +84,7 @@ namespace RemoteAudioHost
         }
         public class LSPAudio
         {
-            private static string ip;
+            private static string localip;
             private static string port;
             private static Audio audio = new Audio();
             private static WebSocketServer wss;
@@ -93,9 +93,9 @@ namespace RemoteAudioHost
             {
                 try
                 {
-                    ip = Form1.ip;
+                    localip = Form1.localip;
                     port = Form1.audioport;
-                    String connectionString = "ws://" + ip + ":" + port;
+                    String connectionString = "ws://" + localip + ":" + port;
                     wss = new WebSocketServer(connectionString);
                     wss.AddWebSocketService<Audio>("/Audio");
                     wss.Start();
@@ -118,7 +118,7 @@ namespace RemoteAudioHost
         }
         public class Audio : WebSocketBehavior
         {
-            private static byte[] rawdataavailable;
+            private static byte[] rawdataavailable = null, raw = null;
             protected override void OnMessage(MessageEventArgs e)
             {
                 base.OnMessage(e);
@@ -132,7 +132,9 @@ namespace RemoteAudioHost
             }
             public void waveIn_DataAvailable(object sender, WaveInEventArgs e)
             {
-                rawdataavailable = e.Buffer;
+                raw = e.Buffer;
+                Array.Resize(ref raw, e.BytesRecorded);
+                rawdataavailable = raw;
             }
         }
     }

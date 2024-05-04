@@ -66,6 +66,16 @@ namespace RemoteAudio
                 this.Close();
             }
         }
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            running = false;
+            System.Threading.Thread.Sleep(300);
+            using (System.IO.StreamWriter createdfile = new System.IO.StreamWriter("tempsave"))
+            {
+                createdfile.WriteLine(textBox1.Text);
+                createdfile.WriteLine(textBox2.Text);
+            }
+        }
         private void button1_Click(object sender, EventArgs e)
         {
             if (!running)
@@ -121,16 +131,6 @@ namespace RemoteAudio
         {
             wscaudio.Close();
             soundOut.Stop();
-        }
-        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            running = false;
-            System.Threading.Thread.Sleep(300);
-            using (System.IO.StreamWriter createdfile = new System.IO.StreamWriter("tempsave"))
-            {
-                createdfile.WriteLine(textBox1.Text);
-                createdfile.WriteLine(textBox2.Text);
-            }
         }
     }
 }
