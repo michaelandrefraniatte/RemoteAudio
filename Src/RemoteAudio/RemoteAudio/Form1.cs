@@ -115,6 +115,7 @@ namespace RemoteAudio
             soundOut = new WasapiOut(wasapi, AudioClientShareMode.Shared, false, 2);
             src = new BufferedWaveProvider(WaveFormat.CreateCustomFormat(waveformat.Encoding, waveformat.SampleRate, waveformat.Channels, waveformat.AverageBytesPerSecond, waveformat.BlockAlign, waveformat.BitsPerSample));
             src.DiscardOnBufferOverflow = true;
+            src.BufferDuration = TimeSpan.FromMilliseconds(80);
             src.BufferLength = waveformat.AverageBytesPerSecond * 80 / 1000;
             soundOut.Init(src);
             soundOut.Play();
