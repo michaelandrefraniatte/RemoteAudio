@@ -26,7 +26,6 @@ namespace RemoteAudio
         public WebSocket wscaudio;
         public BufferedWaveProvider src;
         public WasapiOut soundOut;
-        public int length;
         private void Form1_Load(object sender, EventArgs e)
         {
             TimeBeginPeriod(1);
@@ -37,12 +36,6 @@ namespace RemoteAudio
                 {
                     textBox1.Text = file.ReadLine();
                     textBox2.Text = file.ReadLine();
-                    textBox3.Text = file.ReadLine();
-                    textBox4.Text = file.ReadLine();
-                    textBox5.Text = file.ReadLine();
-                    textBox6.Text = file.ReadLine();
-                    textBox7.Text = file.ReadLine();
-                    textBox8.Text = file.ReadLine();
                 }
             }
         }
@@ -71,12 +64,6 @@ namespace RemoteAudio
             {
                 createdfile.WriteLine(textBox1.Text);
                 createdfile.WriteLine(textBox2.Text);
-                createdfile.WriteLine(textBox3.Text);
-                createdfile.WriteLine(textBox4.Text);
-                createdfile.WriteLine(textBox5.Text);
-                createdfile.WriteLine(textBox6.Text);
-                createdfile.WriteLine(textBox7.Text);
-                createdfile.WriteLine(textBox8.Text);
             }
             try
             {
@@ -124,19 +111,17 @@ namespace RemoteAudio
                 wasapi = mmdevice;
                 break;
             }
+            WaveFormat waveformat = (new WasapiLoopbackCapture()).WaveFormat;
             soundOut = new WasapiOut(wasapi, AudioClientShareMode.Shared, false, 2);
-            src = new BufferedWaveProvider(WaveFormat.CreateCustomFormat((WaveFormatEncoding)int.Parse(textBox3.Text), int.Parse(textBox4.Text), int.Parse(textBox5.Text), int.Parse(textBox6.Text), int.Parse(textBox7.Text), int.Parse(textBox8.Text)));
+            src = new BufferedWaveProvider(WaveFormat.CreateCustomFormat(waveformat.Encoding, waveformat.SampleRate, waveformat.Channels, waveformat.AverageBytesPerSecond, waveformat.BlockAlign, waveformat.BitsPerSample));
             src.DiscardOnBufferOverflow = true;
+            src.BufferLength = waveformat.AverageBytesPerSecond * 80 / 1000;
             soundOut.Init(src);
             soundOut.Play();
         }
         private void Ws_OnMessageAudio(object sender, MessageEventArgs e)
         {
-            Task.Run(() => {
-                length = e.RawData.Length;
-                src.BufferLength = length;
-                src.AddSamples(e.RawData, 0, length);
-            });
+            src.AddSamples(e.RawData, 0, e.RawData.Length);
         }
         public void DisconnectAudio()
         {

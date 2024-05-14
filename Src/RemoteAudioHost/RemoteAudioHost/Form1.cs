@@ -30,6 +30,7 @@ namespace RemoteAudioHost
         private static string audioport, localip;
         private static WasapiLoopbackCapture waveIn = null;
         public static byte[] rawdataavailable = null, raw = null;
+        public static Action<bool> action = null;
         private void Form1_Load(object sender, EventArgs e)
         {
             TimeBeginPeriod(1);
@@ -90,19 +91,9 @@ namespace RemoteAudioHost
                 Task.Run(() => LSPAudio.Disconnect());
             }
         }
-        public void SetAudioInfo(string encoding, string samplerate, string channels, string averagebytespersecond, string blockalign, string bitspersample)
-        {
-            textBox3.Text = encoding;
-            textBox4.Text = samplerate;
-            textBox5.Text = channels;
-            textBox6.Text = averagebytespersecond;
-            textBox7.Text = blockalign;
-            textBox8.Text = bitspersample;
-        }
         private void GetAudioByteArray()
         {
             waveIn = new WasapiLoopbackCapture();
-            SetAudioInfo(Convert.ToInt32(waveIn.WaveFormat.Encoding).ToString(), waveIn.WaveFormat.SampleRate.ToString(), waveIn.WaveFormat.Channels.ToString(), waveIn.WaveFormat.AverageBytesPerSecond.ToString(), waveIn.WaveFormat.BlockAlign.ToString(), waveIn.WaveFormat.BitsPerSample.ToString());
             waveIn.DataAvailable += waveIn_DataAvailable;
             waveIn.StartRecording();
         }
@@ -144,7 +135,7 @@ namespace RemoteAudioHost
                 while (Form1.running)
                 {
                     if (rawdataavailable != null)
-                        Send(rawdataavailable);
+                        SendAsync(rawdataavailable, Form1.action);
                     rawdataavailable = null;
                     Thread.Sleep(1);
                 }
