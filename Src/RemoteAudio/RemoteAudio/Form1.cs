@@ -1,20 +1,10 @@
 ﻿using NAudio.CoreAudioApi;
-using NAudio.SoundFont;
 using NAudio.Wave;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Net.Sockets;
-using System.Net;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using WebSocketSharp;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace RemoteAudio
 {
@@ -36,6 +26,7 @@ namespace RemoteAudio
         public WebSocket wscaudio;
         public BufferedWaveProvider src;
         public WasapiOut soundOut;
+        public int length;
         private void Form1_Load(object sender, EventArgs e)
         {
             TimeBeginPeriod(1);
@@ -46,6 +37,12 @@ namespace RemoteAudio
                 {
                     textBox1.Text = file.ReadLine();
                     textBox2.Text = file.ReadLine();
+                    textBox3.Text = file.ReadLine();
+                    textBox4.Text = file.ReadLine();
+                    textBox5.Text = file.ReadLine();
+                    textBox6.Text = file.ReadLine();
+                    textBox7.Text = file.ReadLine();
+                    textBox8.Text = file.ReadLine();
                 }
             }
         }
@@ -74,7 +71,18 @@ namespace RemoteAudio
             {
                 createdfile.WriteLine(textBox1.Text);
                 createdfile.WriteLine(textBox2.Text);
+                createdfile.WriteLine(textBox3.Text);
+                createdfile.WriteLine(textBox4.Text);
+                createdfile.WriteLine(textBox5.Text);
+                createdfile.WriteLine(textBox6.Text);
+                createdfile.WriteLine(textBox7.Text);
+                createdfile.WriteLine(textBox8.Text);
             }
+            try
+            {
+                DisconnectAudio();
+            }
+            catch { }
         }
         private void button1_Click(object sender, EventArgs e)
         {
@@ -117,15 +125,18 @@ namespace RemoteAudio
                 break;
             }
             soundOut = new WasapiOut(wasapi, AudioClientShareMode.Shared, false, 2);
-            src = new BufferedWaveProvider(soundOut.OutputWaveFormat);
+            src = new BufferedWaveProvider(WaveFormat.CreateCustomFormat((WaveFormatEncoding)int.Parse(textBox3.Text), int.Parse(textBox4.Text), int.Parse(textBox5.Text), int.Parse(textBox6.Text), int.Parse(textBox7.Text), int.Parse(textBox8.Text)));
             src.DiscardOnBufferOverflow = true;
-            src.BufferDuration = TimeSpan.FromMilliseconds(80);
             soundOut.Init(src);
             soundOut.Play();
         }
         private void Ws_OnMessageAudio(object sender, MessageEventArgs e)
         {
-            src.AddSamples(e.RawData, 0, e.RawData.Length);
+            Task.Run(() => {
+                length = e.RawData.Length;
+                src.BufferLength = length;
+                src.AddSamples(e.RawData, 0, length);
+            });
         }
         public void DisconnectAudio()
         {

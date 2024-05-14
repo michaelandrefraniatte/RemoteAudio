@@ -6,6 +6,10 @@ using System.Windows.Forms;
 using WebSocketSharp.Server;
 using WebSocketSharp;
 using System.Threading;
+using System.Runtime.Remoting.Channels;
+using static RemoteAudioHost.Form1;
+using static System.Windows.Forms.DataFormats;
+using System.Text;
 
 namespace RemoteAudioHost
 {
@@ -24,6 +28,8 @@ namespace RemoteAudioHost
         private static uint CurrentResolution = 0;
         private static bool running = false;
         private static string audioport, localip;
+        private static WasapiLoopbackCapture waveIn = null;
+        public static byte[] rawdataavailable = null, raw = null;
         private void Form1_Load(object sender, EventArgs e)
         {
             TimeBeginPeriod(1);
@@ -36,6 +42,7 @@ namespace RemoteAudioHost
                     textBox2.Text = file.ReadLine();
                 }
             }
+            GetAudioByteArray();
         }
         private void Form1_KeyDown(object sender, KeyEventArgs e)
         {
@@ -63,6 +70,7 @@ namespace RemoteAudioHost
                 createdfile.WriteLine(textBox1.Text);
                 createdfile.WriteLine(textBox2.Text);
             }
+            waveIn.Dispose();
         }
         private void button1_Click(object sender, EventArgs e)
         {
@@ -82,13 +90,33 @@ namespace RemoteAudioHost
                 Task.Run(() => LSPAudio.Disconnect());
             }
         }
+        public void SetAudioInfo(string encoding, string samplerate, string channels, string averagebytespersecond, string blockalign, string bitspersample)
+        {
+            textBox3.Text = encoding;
+            textBox4.Text = samplerate;
+            textBox5.Text = channels;
+            textBox6.Text = averagebytespersecond;
+            textBox7.Text = blockalign;
+            textBox8.Text = bitspersample;
+        }
+        private void GetAudioByteArray()
+        {
+            waveIn = new WasapiLoopbackCapture();
+            SetAudioInfo(Convert.ToInt32(waveIn.WaveFormat.Encoding).ToString(), waveIn.WaveFormat.SampleRate.ToString(), waveIn.WaveFormat.Channels.ToString(), waveIn.WaveFormat.AverageBytesPerSecond.ToString(), waveIn.WaveFormat.BlockAlign.ToString(), waveIn.WaveFormat.BitsPerSample.ToString());
+            waveIn.DataAvailable += waveIn_DataAvailable;
+            waveIn.StartRecording();
+        }
+        public void waveIn_DataAvailable(object sender, WaveInEventArgs e)
+        {
+            raw = e.Buffer;
+            Array.Resize(ref raw, e.BytesRecorded);
+            rawdataavailable = raw;
+        }
         public class LSPAudio
         {
             private static string localip;
             private static string port;
-            private static Audio audio = new Audio();
             private static WebSocketServer wss;
-            private static WasapiLoopbackCapture waveIn = null;
             public static void Connect()
             {
                 try
@@ -99,26 +127,17 @@ namespace RemoteAudioHost
                     wss = new WebSocketServer(connectionString);
                     wss.AddWebSocketService<Audio>("/Audio");
                     wss.Start();
-                    GetAudioByteArray();
                 }
                 catch { }
-            }
-            private static void GetAudioByteArray()
-            {
-                waveIn = new WasapiLoopbackCapture();
-                waveIn.DataAvailable += audio.waveIn_DataAvailable;
-                waveIn.StartRecording();
             }
             public static void Disconnect()
             {
                 wss.RemoveWebSocketService("/Audio");
                 wss.Stop();
-                waveIn.Dispose();
             }
         }
         public class Audio : WebSocketBehavior
         {
-            private static byte[] rawdataavailable = null, raw = null;
             protected override void OnMessage(MessageEventArgs e)
             {
                 base.OnMessage(e);
@@ -129,12 +148,6 @@ namespace RemoteAudioHost
                     rawdataavailable = null;
                     Thread.Sleep(1);
                 }
-            }
-            public void waveIn_DataAvailable(object sender, WaveInEventArgs e)
-            {
-                raw = e.Buffer;
-                Array.Resize(ref raw, e.BytesRecorded);
-                rawdataavailable = raw;
             }
         }
     }
